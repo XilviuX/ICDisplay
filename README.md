@@ -13,8 +13,7 @@ Affiche les données Home Assistant sur un écran OLED **SH1107 128x128** branch
 │ TEMP   HUMID   │
 │ 21.3°C  48.0%  │
 │────────────────│
-│   14:32        │
-│           :07  │
+│   14:32:07     │
 │ □ □ ■          │
 └────────────────┘
 ```
