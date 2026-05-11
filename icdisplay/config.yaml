@@ -1,0 +1,28 @@
+name: "ICDisplay"
+description: "Affiche les données Home Assistant sur un écran OLED SH1107 128x128 via I2C"
+version: "1.0.0"
+slug: "icdisplay"
+init: false
+arch:
+  - aarch64
+startup: application
+boot: auto
+map: []
+options:
+  ha_url: "http://172.16.137.11:8123"
+  ha_token: ""
+  i2c_bus: 1
+  i2c_address: "0x3C"
+  sensor_temp: "sensor.temperature_interieure_moyenne"
+  sensor_humidity: "sensor.humidite_interieure_moyenne"
+schema:
+  ha_url: str
+  ha_token: str
+  i2c_bus: int
+  i2c_address: str
+  sensor_temp: str
+  sensor_humidity: str
+devices:
+  - /dev/i2c-1
+homeassistant_api: false
+hassio_api: false
