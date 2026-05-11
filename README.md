@@ -6,7 +6,7 @@ Affiche les données Home Assistant sur un écran OLED **SH1107 128x128** branch
 
 ```
 ┌────────────────┐
-│  loulous.lu    │
+│ Home Assistant │
 │────────────────│
 │  ● EN LIGNE    │
 │────────────────│
