@@ -142,7 +142,7 @@ class OLEDRenderer:
         sec  = now.strftime("%S")
 
         # ── Titre ──────────────────────────────────────────────────────────
-        draw.text((4, 2), "loulous.lu", font=self.font_small, fill=1)
+        draw.text((4, 2), "Home Assistant", font=self.font_small, fill=1)
 
         # Ligne de séparation
         draw.line([(0, 16), (128, 16)], fill=1, width=1)
