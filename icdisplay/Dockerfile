@@ -1,24 +1,25 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
-# Install dependencies
+# Install system dependencies
 RUN apk add --no-cache \
-    python3 \
-    py3-pip \
-    py3-pillow \
-    i2c-tools \
     gcc \
     python3-dev \
     musl-dev \
-    linux-headers
+    linux-headers \
+    i2c-tools \
+    freetype \
+    freetype-dev \
+    jpeg-dev \
+    zlib-dev
 
 # Install Python packages
-RUN pip3 install --break-system-packages \
+RUN pip3 install \
     luma.oled \
-    requests
+    requests \
+    pillow
 
 # Copy app
-COPY run.py /
-COPY fonts/ /fonts/
+COPY run.py /run.py
 
 CMD ["python3", "/run.py"]
