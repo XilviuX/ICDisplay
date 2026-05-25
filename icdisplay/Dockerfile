@@ -1,7 +1,10 @@
-FROM ghcr.io/home-assistant/aarch64-base-python:3.12
+ARG BUILD_FROM
+FROM $BUILD_FROM
 
-# Install system dependencies
+# Install Python and dependencies
 RUN apk add --no-cache \
+    python3 \
+    py3-pip \
     gcc \
     python3-dev \
     musl-dev \
@@ -13,7 +16,7 @@ RUN apk add --no-cache \
     zlib-dev
 
 # Install Python packages
-RUN pip3 install \
+RUN pip3 install --break-system-packages \
     luma.oled \
     requests \
     pillow
