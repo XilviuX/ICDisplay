@@ -11,7 +11,7 @@ import threading
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 from luma.core.interface.serial import i2c
-from luma.oled.device import ssd1306
+from luma.oled.device import ssd1306, sh1106
 
 # ── Config ────────────────────────────────────────────────────────────────────
 HA_URL          = os.environ.get("HA_URL",         "http://172.16.137.11:8123")
@@ -29,7 +29,7 @@ W, H = 128, 64
 # ── Fonts ─────────────────────────────────────────────────────────────────────
 def load_font(size, bold=False):
     paths = [
-        f"/fonts/DejaVuSans{'Bold' if bold else ''}.ttf",
+        f"/usr/share/fonts/dejavu/DejaVuSans{'Bold' if bold else ''}.ttf",
         f"/usr/share/fonts/truetype/dejavu/DejaVuSans{'Bold' if bold else ''}.ttf",
         f"/usr/share/fonts/dejavu/DejaVuSans{'Bold' if bold else ''}.ttf",
     ]
@@ -192,7 +192,7 @@ def splash(device):
 def main():
     print(f"[ICDisplay] I2C bus={I2C_BUS} addr=0x{I2C_ADDRESS:02X}")
     serial = i2c(port=I2C_BUS, address=I2C_ADDRESS)
-    device = ssd1306(serial, width=W, height=H, rotate=0)
+    device = ssd1306(serial, width=W, height=H, rotate=0, h_flip=True)
 
     splash(device)
 
