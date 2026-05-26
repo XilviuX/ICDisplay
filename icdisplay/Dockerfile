@@ -1,7 +1,6 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
-# Install Python and dependencies
 RUN apk add --no-cache \
     python3 \
     py3-pip \
@@ -13,15 +12,14 @@ RUN apk add --no-cache \
     freetype \
     freetype-dev \
     jpeg-dev \
-    zlib-dev
+    zlib-dev \
+    ttf-dejavu
 
-# Install Python packages
 RUN pip3 install --break-system-packages \
     luma.oled \
     requests \
     pillow
 
-# Copy app
 COPY run.py /run.py
 
 CMD ["python3", "/run.py"]
