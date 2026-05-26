@@ -1,6 +1,6 @@
 name: "ICDisplay"
-description: "Affiche les données Home Assistant sur un écran OLED SH1107 128x128 via I2C"
-version: "1.0.0"
+description: "Affiche les données Home Assistant sur un écran OLED SSD1306 128x64 via I2C"
+version: "1.1.0"
 slug: "icdisplay"
 init: false
 arch:
