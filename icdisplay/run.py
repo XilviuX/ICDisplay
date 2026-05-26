@@ -29,9 +29,9 @@ W, H = 128, 64
 # ── Fonts ─────────────────────────────────────────────────────────────────────
 def load_font(size, bold=False):
     paths = [
-        f"/usr/share/fonts/dejavu/DejaVuSans{'Bold' if bold else ''}.ttf",
-        f"/usr/share/fonts/truetype/dejavu/DejaVuSans{'Bold' if bold else ''}.ttf",
-        f"/usr/share/fonts/dejavu/DejaVuSans{'Bold' if bold else ''}.ttf",
+        f"/usr/share/fonts/dejavu/DejaVuSans{'-Bold' if bold else ''}.ttf",
+        f"/usr/share/fonts/truetype/dejavu/DejaVuSans{'-Bold' if bold else ''}.ttf",
+        f"/usr/share/fonts/dejavu/DejaVuSans{'-Bold' if bold else ''}.ttf",
     ]
     for p in paths:
         if os.path.exists(p):
