@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 from PIL import Image, ImageDraw, ImageFont
 from luma.core.interface.serial import i2c
-from luma.oled.device import ssd1306
+from luma.oled.device import sh1106
 import time, os
 
 serial = i2c(port=1, address=0x3C)
-device = ssd1306(serial, width=128, height=64, rotate=0, h_flip=True)
+device = sh1106(serial, width=128, height=64, rotate=0, h_flip=True)
 
 font = ImageFont.truetype("/usr/share/fonts/dejavu/DejaVuSans.ttf", 14)
 
