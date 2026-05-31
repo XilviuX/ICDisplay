@@ -1,27 +1,21 @@
 #!/usr/bin/env python3
 """
 ICDisplay — Home Assistant OLED Monitor
-SH1106 128x64 via I2C
+SH1106 128x64 — rendu bitmap 5x7 natif, sans PIL TTF
 """
 
-import os
-import json
-import time
-import requests
-import threading
+import os, json, time, requests, threading
 from datetime import datetime
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from luma.core.interface.serial import i2c
 from luma.oled.device import sh1106
 
 # ── Config ────────────────────────────────────────────────────────────────────
 def load_options():
     try:
-        with open("/data/options.json") as f:
-            return json.load(f)
+        with open("/data/options.json") as f: return json.load(f)
     except Exception as e:
-        print(f"[ICDisplay] options.json: {e}")
-        return {}
+        print(f"[ICDisplay] options.json: {e}"); return {}
 
 opts       = load_options()
 HA_URL     = opts.get("ha_url",      "http://172.16.137.11:8123")
@@ -30,36 +24,100 @@ I2C_BUS    = int(opts.get("i2c_bus",      1))
 I2C_ADDR   = int(opts.get("i2c_address", "0x3C"), 16)
 SENSOR_CPU = opts.get("sensor_cpu",  "sensor.system_monitor_utilisation_du_processeur")
 SENSOR_RAM = opts.get("sensor_ram",  "sensor.system_monitor_utilisation_de_la_memoire")
-
-print(f"[ICDisplay] URL={HA_URL} I2C=0x{I2C_ADDR:02X}")
-
 W, H = 128, 64
 
-# ── Polices ───────────────────────────────────────────────────────────────────
-SILK    = "/usr/share/fonts/silkscreen/Silkscreen-Regular.ttf"
-SILK_B  = "/usr/share/fonts/silkscreen/Silkscreen-Bold.ttf"
-DEJAVU  = "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"
+# ── Police bitmap 5x7 (ASCII 32-127) ─────────────────────────────────────────
+# Chaque caractère = 5 octets, chaque octet = colonne de 7 bits (bit0=haut)
+FONT5X7 = {
+    ' ':(0x00,0x00,0x00,0x00,0x00), '!':(0x00,0x00,0x5F,0x00,0x00),
+    '"':(0x00,0x07,0x00,0x07,0x00), '#':(0x14,0x7F,0x14,0x7F,0x14),
+    '$':(0x24,0x2A,0x7F,0x2A,0x12), '%':(0x23,0x13,0x08,0x64,0x62),
+    '&':(0x36,0x49,0x55,0x22,0x50), "'":(0x00,0x05,0x03,0x00,0x00),
+    '(':(0x00,0x1C,0x22,0x41,0x00), ')':(0x00,0x41,0x22,0x1C,0x00),
+    '*':(0x08,0x2A,0x1C,0x2A,0x08), '+':(0x08,0x08,0x3E,0x08,0x08),
+    ',':(0x00,0x50,0x30,0x00,0x00), '-':(0x08,0x08,0x08,0x08,0x08),
+    '.':(0x00,0x60,0x60,0x00,0x00), '/':(0x20,0x10,0x08,0x04,0x02),
+    '0':(0x3E,0x51,0x49,0x45,0x3E), '1':(0x00,0x42,0x7F,0x40,0x00),
+    '2':(0x42,0x61,0x51,0x49,0x46), '3':(0x21,0x41,0x45,0x4B,0x31),
+    '4':(0x18,0x14,0x12,0x7F,0x10), '5':(0x27,0x45,0x45,0x45,0x39),
+    '6':(0x3C,0x4A,0x49,0x49,0x30), '7':(0x01,0x71,0x09,0x05,0x03),
+    '8':(0x36,0x49,0x49,0x49,0x36), '9':(0x06,0x49,0x49,0x29,0x1E),
+    ':':(0x00,0x36,0x36,0x00,0x00), ';':(0x00,0x56,0x36,0x00,0x00),
+    '<':(0x00,0x08,0x14,0x22,0x41), '=':(0x14,0x14,0x14,0x14,0x14),
+    '>':(0x41,0x22,0x14,0x08,0x00), '?':(0x02,0x01,0x51,0x09,0x06),
+    '@':(0x32,0x49,0x79,0x41,0x3E), 'A':(0x7E,0x11,0x11,0x11,0x7E),
+    'B':(0x7F,0x49,0x49,0x49,0x36), 'C':(0x3E,0x41,0x41,0x41,0x22),
+    'D':(0x7F,0x41,0x41,0x22,0x1C), 'E':(0x7F,0x49,0x49,0x49,0x41),
+    'F':(0x7F,0x09,0x09,0x09,0x01), 'G':(0x3E,0x41,0x41,0x51,0x32),
+    'H':(0x7F,0x08,0x08,0x08,0x7F), 'I':(0x00,0x41,0x7F,0x41,0x00),
+    'J':(0x20,0x40,0x41,0x3F,0x01), 'K':(0x7F,0x08,0x14,0x22,0x41),
+    'L':(0x7F,0x40,0x40,0x40,0x40), 'M':(0x7F,0x02,0x04,0x02,0x7F),
+    'N':(0x7F,0x04,0x08,0x10,0x7F), 'O':(0x3E,0x41,0x41,0x41,0x3E),
+    'P':(0x7F,0x09,0x09,0x09,0x06), 'Q':(0x3E,0x41,0x51,0x21,0x5E),
+    'R':(0x7F,0x09,0x19,0x29,0x46), 'S':(0x46,0x49,0x49,0x49,0x31),
+    'T':(0x01,0x01,0x7F,0x01,0x01), 'U':(0x3F,0x40,0x40,0x40,0x3F),
+    'V':(0x1F,0x20,0x40,0x20,0x1F), 'W':(0x3F,0x40,0x38,0x40,0x3F),
+    'X':(0x63,0x14,0x08,0x14,0x63), 'Y':(0x03,0x04,0x78,0x04,0x03),
+    'Z':(0x61,0x51,0x49,0x45,0x43), '[':(0x00,0x00,0x7F,0x41,0x41),
+    '\\':(0x02,0x04,0x08,0x10,0x20),']':(0x41,0x41,0x7F,0x00,0x00),
+    '^':(0x04,0x02,0x01,0x02,0x04), '_':(0x40,0x40,0x40,0x40,0x40),
+    '`':(0x00,0x01,0x02,0x04,0x00), 'a':(0x20,0x54,0x54,0x54,0x78),
+    'b':(0x7F,0x48,0x44,0x44,0x38), 'c':(0x38,0x44,0x44,0x44,0x20),
+    'd':(0x38,0x44,0x44,0x48,0x7F), 'e':(0x38,0x54,0x54,0x54,0x18),
+    'f':(0x08,0x7E,0x09,0x01,0x02), 'g':(0x08,0x14,0x54,0x54,0x3C),
+    'h':(0x7F,0x08,0x04,0x04,0x78), 'i':(0x00,0x44,0x7D,0x40,0x00),
+    'j':(0x20,0x40,0x44,0x3D,0x00), 'k':(0x00,0x7F,0x10,0x28,0x44),
+    'l':(0x00,0x41,0x7F,0x40,0x00), 'm':(0x7C,0x04,0x18,0x04,0x78),
+    'n':(0x7C,0x08,0x04,0x04,0x78), 'o':(0x38,0x44,0x44,0x44,0x38),
+    'p':(0x7C,0x14,0x14,0x14,0x08), 'q':(0x08,0x14,0x14,0x18,0x7C),
+    'r':(0x7C,0x08,0x04,0x04,0x08), 's':(0x48,0x54,0x54,0x54,0x20),
+    't':(0x04,0x3F,0x44,0x40,0x20), 'u':(0x3C,0x40,0x40,0x20,0x7C),
+    'v':(0x1C,0x20,0x40,0x20,0x1C), 'w':(0x3C,0x40,0x30,0x40,0x3C),
+    'x':(0x44,0x28,0x10,0x28,0x44), 'y':(0x0C,0x50,0x50,0x50,0x3C),
+    'z':(0x44,0x64,0x54,0x4C,0x44), '{':(0x00,0x08,0x36,0x41,0x00),
+    '|':(0x00,0x00,0x7F,0x00,0x00), '}':(0x00,0x41,0x36,0x08,0x00),
+    '~':(0x08,0x04,0x08,0x10,0x08),
+    # Caractères étendus utiles
+    '%':(0x23,0x13,0x08,0x64,0x62),
+    '°':(0x06,0x09,0x09,0x06,0x00),
+}
 
-def font(path, size):
-    try:
-        return ImageFont.truetype(path, size)
-    except:
-        return ImageFont.load_default()
+SCALE1 = 1  # taille normale  : chaque pixel = 1px
+SCALE2 = 2  # taille double   : chaque pixel = 2x2px
+
+def draw_char(draw, x, y, ch, scale=1):
+    cols = FONT5X7.get(ch.upper() if ch.upper() in FONT5X7 else ch, FONT5X7.get(' '))
+    for col_i, col_data in enumerate(cols):
+        for row_i in range(7):
+            if col_data & (1 << row_i):
+                px = x + col_i * scale
+                py = y + row_i * scale
+                if scale == 1:
+                    draw.point((px, py), fill=1)
+                else:
+                    draw.rectangle([px, py, px+scale-1, py+scale-1], fill=1)
+    return x + (5 + 1) * scale  # avance de 6px (5 + 1 espace)
+
+def draw_text(draw, x, y, text, scale=1):
+    cx = x
+    for ch in text:
+        cx = draw_char(draw, cx, y, ch, scale)
+    return cx
+
+def text_width(text, scale=1):
+    return len(text) * 6 * scale
 
 # ── HA Client ─────────────────────────────────────────────────────────────────
 class HAClient:
     def __init__(self):
         self.headers = {"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"}
-        self.cpu    = "--"
-        self.ram    = "--"
-        self.online = False
-        self._lock  = threading.Lock()
+        self.cpu = "--"; self.ram = "--"; self.online = False
+        self._lock = threading.Lock()
 
     def fetch(self):
         try:
             r = requests.get(f"{HA_URL}/api/", headers=self.headers, timeout=5)
             if r.status_code != 200:
-                print(f"[HA] status {r.status_code}")
                 with self._lock: self.online = False
                 return
             def get(eid):
@@ -69,12 +127,9 @@ class HAClient:
                     try: return f"{float(val):.0f}"
                     except: return val
                 return "--"
-            cpu = get(SENSOR_CPU)
-            ram = get(SENSOR_RAM)
+            cpu = get(SENSOR_CPU); ram = get(SENSOR_RAM)
             with self._lock:
-                self.cpu    = cpu
-                self.ram    = ram
-                self.online = True
+                self.cpu = cpu; self.ram = ram; self.online = True
                 print(f"[HA] CPU={cpu}% RAM={ram}%")
         except Exception as e:
             print(f"[HA] {e}")
@@ -82,25 +137,16 @@ class HAClient:
 
     def start_polling(self):
         def loop():
-            while True:
-                self.fetch()
-                time.sleep(10)
+            while True: self.fetch(); time.sleep(10)
         threading.Thread(target=loop, daemon=True).start()
 
     def get(self):
-        with self._lock:
-            return self.cpu, self.ram, self.online
+        with self._lock: return self.cpu, self.ram, self.online
 
-
+# ── Rendu ─────────────────────────────────────────────────────────────────────
 SPINNERS = ["|", "/", "-", "\\"]
 
 def render(device, ha):
-    # Silkscreen est une police pixel-perfect — utilise des tailles multiples de 8
-    f_clock = font(SILK_B, 16)   # heure
-    f_big   = font(SILK_B, 16)   # valeurs CPU/RAM
-    f_med   = font(SILK,   8)    # labels
-    f_spin  = font(SILK_B, 8)    # spinner
-
     tick = 0
     while True:
         cpu, ram, online = ha.get()
@@ -109,42 +155,53 @@ def render(device, ha):
         img  = Image.new("1", (W, H), 0)
         draw = ImageDraw.Draw(img)
 
-        # ── Heure ─────────────────────────────────────────────────────
+        # ── Heure en grand (scale=2 → caractères 10x14) ───────────────
         t = now.strftime("%H:%M:%S")
-        bbox = draw.textbbox((0, 0), t, font=f_clock)
-        draw.text(((W - bbox[2]) // 2, 2), t, font=f_clock, fill=1)
+        tw = text_width(t, scale=2)
+        draw_text(draw, (W - tw) // 2, 1, t, scale=2)
 
         # ── Séparateur ────────────────────────────────────────────────
-        draw.line([(0, 22), (W, 22)], fill=1)
+        draw.line([(0, 17), (W, 17)], fill=1)
 
         # ── CPU ───────────────────────────────────────────────────────
-        draw.text((2, 25),  "CPU",      font=f_med,  fill=1)
-        draw.text((2, 36),  f"{cpu}%",  font=f_big,  fill=1)
+        draw_text(draw, 2,  20, "CPU:", scale=1)
+        draw_text(draw, 2,  29, f"{cpu}%", scale=1)
 
         # ── RAM ───────────────────────────────────────────────────────
-        draw.text((50, 25), "RAM",      font=f_med,  fill=1)
-        draw.text((50, 36), f"{ram}%",  font=f_big,  fill=1)
+        draw_text(draw, 50, 20, "RAM:", scale=1)
+        draw_text(draw, 50, 29, f"{ram}%", scale=1)
 
         # ── Spinner + statut ──────────────────────────────────────────
         sp  = SPINNERS[tick % len(SPINNERS)]
         dot = "ON" if online else "OFF"
-        draw.text((100, 25), sp,        font=f_spin, fill=1)
-        draw.text((96,  36), dot,       font=f_spin, fill=1)
+        draw_text(draw, 104, 20, sp,  scale=1)
+        draw_text(draw, 98,  29, dot, scale=1)
 
-        # ── Séparateur bas ────────────────────────────────────────────
-        draw.line([(0, 54), (W, 54)], fill=1)
+        # ── Séparateur ────────────────────────────────────────────────
+        draw.line([(0, 39), (W, 39)], fill=1)
 
         # ── Date ──────────────────────────────────────────────────────
-        d = now.strftime("%a %d %b")
-        bbox2 = draw.textbbox((0, 0), d, font=f_med)
-        draw.text(((W - bbox2[2]) // 2, 56), d, font=f_med, fill=1)
+        d = now.strftime("%a %d %b %Y")
+        dw = text_width(d, scale=1)
+        draw_text(draw, (W - dw) // 2, 42, d, scale=1)
+
+        # ── Barre de progression CPU (visuel) ─────────────────────────
+        try:
+            pct = min(int(float(cpu)), 100)
+            bar_w = int((W - 4) * pct / 100)
+            draw.rectangle([(2, 52), (W-2, 58)], outline=1)
+            if bar_w > 0:
+                draw.rectangle([(2, 52), (2 + bar_w, 58)], fill=1)
+            draw_text(draw, 4, 53, "CPU", scale=1)
+        except: pass
 
         device.display(img)
         tick += 1
         time.sleep(1)
 
-
+# ── Main ──────────────────────────────────────────────────────────────────────
 def main():
+    print(f"[ICDisplay] I2C bus={I2C_BUS} addr=0x{I2C_ADDR:02X}")
     serial = i2c(port=I2C_BUS, address=I2C_ADDR)
     device = sh1106(serial, width=W, height=H, rotate=0, h_flip=True)
     ha = HAClient()
