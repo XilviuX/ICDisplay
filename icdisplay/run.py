@@ -5,6 +5,7 @@ SH1106 128x64 via I2C
 """
 
 import os
+import json
 import time
 import requests
 import threading
@@ -13,12 +14,26 @@ from PIL import Image, ImageDraw, ImageFont
 from luma.core.interface.serial import i2c
 from luma.oled.device import sh1106
 
-HA_URL     = os.environ.get("HA_URL",         "http://172.16.137.11:8123")
-HA_TOKEN   = os.environ.get("HA_TOKEN",       "")
-I2C_BUS    = int(os.environ.get("I2C_BUS",    "1"))
-I2C_ADDR   = int(os.environ.get("I2C_ADDRESS","0x3C"), 16)
-SENSOR_CPU = os.environ.get("SENSOR_CPU",     "sensor.system_monitor_utilisation_du_processeur")
-SENSOR_RAM = os.environ.get("SENSOR_RAM",     "sensor.system_monitor_utilisation_de_la_memoire")
+# ── Config depuis /data/options.json (HAOS) ──────────────────────────────────
+OPTIONS_FILE = "/data/options.json"
+
+def load_options():
+    try:
+        with open(OPTIONS_FILE) as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[ICDisplay] Impossible de lire {OPTIONS_FILE}: {e}")
+        return {}
+
+opts = load_options()
+print(f"[ICDisplay] Options chargées: { {k: v[:10]+'...' if k=='ha_token' and v else v for k,v in opts.items()} }")
+
+HA_URL     = opts.get("ha_url",      "http://172.16.137.11:8123")
+HA_TOKEN   = opts.get("ha_token",    "")
+I2C_BUS    = int(opts.get("i2c_bus",     1))
+I2C_ADDR   = int(opts.get("i2c_address", "0x3C"), 16)
+SENSOR_CPU = opts.get("sensor_cpu",  "sensor.system_monitor_utilisation_du_processeur")
+SENSOR_RAM = opts.get("sensor_ram",  "sensor.system_monitor_utilisation_de_la_memoire")
 
 W, H = 128, 64
 
@@ -34,6 +49,7 @@ class HAClient:
         try:
             r = requests.get(f"{HA_URL}/api/", headers=self.headers, timeout=5)
             if r.status_code != 200:
+                print(f"[HA] API status: {r.status_code}")
                 with self._lock: self.online = False
                 return
             def get(eid):
@@ -69,8 +85,8 @@ SPINNERS = ["|", "/", "-", "\\"]
 
 def render(device, ha):
     f_big   = ImageFont.truetype("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf", 26)
-    f_med   = ImageFont.truetype("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf", 13)
-    f_small = ImageFont.truetype("/usr/share/fonts/dejavu/DejaVuSans.ttf",       9)
+    f_med   = ImageFont.truetype("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf", 12)
+    f_small = ImageFont.truetype("/usr/share/fonts/dejavu/DejaVuSans.ttf",      10)
 
     tick = 0
     while True:
@@ -80,7 +96,7 @@ def render(device, ha):
         img  = Image.new("1", (W, H), 0)
         draw = ImageDraw.Draw(img)
 
-        # Heure — centrée, grande
+        # Heure
         t = now.strftime("%H:%M:%S")
         bbox = draw.textbbox((0, 0), t, font=f_big)
         draw.text(((W - bbox[2]) // 2, 1), t, font=f_big, fill=1)
@@ -89,18 +105,17 @@ def render(device, ha):
         draw.line([(0, 32), (W, 32)], fill=1)
 
         # CPU
-        draw.text((2, 34),  "CPU",           font=f_small, fill=1)
-        draw.text((2, 44),  f"{cpu}%",       font=f_med,   fill=1)
+        draw.text((2, 34),  "CPU",     font=f_small, fill=1)
+        draw.text((2, 46),  f"{cpu}%", font=f_med,   fill=1)
 
         # RAM
-        draw.text((52, 34), "RAM",           font=f_small, fill=1)
-        draw.text((52, 44), f"{ram}%",       font=f_med,   fill=1)
+        draw.text((52, 34), "RAM",     font=f_small, fill=1)
+        draw.text((52, 46), f"{ram}%", font=f_med,   fill=1)
 
-        # Spinner
+        # Spinner + statut
         sp = SPINNERS[tick % len(SPINNERS)]
-        draw.text((108, 36), sp,             font=f_med,   fill=1)
-        dot = "●" if online else "○"
-        draw.text((110, 52), dot,            font=f_small, fill=1)
+        draw.text((108, 36), sp,                    font=f_med,   fill=1)
+        draw.text((100, 52), "ON" if online else "OFF", font=f_small, fill=1)
 
         device.display(img)
         tick += 1
