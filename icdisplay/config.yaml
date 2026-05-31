@@ -1,6 +1,6 @@
 name: "ICDisplay"
-description: "Affiche les données Home Assistant sur un écran OLED SSD1306 128x64 via I2C"
-version: "1.8.0"
+description: "Affiche les données Home Assistant sur un écran OLED SH1106 128x64 via I2C"
+version: "1.9.0"
 slug: "icdisplay"
 init: false
 arch:
@@ -13,15 +13,15 @@ options:
   ha_token: ""
   i2c_bus: 1
   i2c_address: "0x3C"
-  sensor_temp: "sensor.temperature_interieure_moyenne"
-  sensor_humidity: "sensor.humidite_interieure_moyenne"
+  sensor_cpu: "sensor.system_monitor_utilisation_du_processeur"
+  sensor_ram: "sensor.system_monitor_utilisation_de_la_memoire"
 schema:
   ha_url: str
   ha_token: str
   i2c_bus: int
   i2c_address: str
-  sensor_temp: str
-  sensor_humidity: str
+  sensor_cpu: str
+  sensor_ram: str
 devices:
   - /dev/i2c-1
 homeassistant_api: false
