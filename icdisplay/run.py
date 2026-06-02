@@ -23,8 +23,9 @@ HA_TOKEN   = opts.get("ha_token",    "")
 I2C_BUS    = int(opts.get("i2c_bus",      1))
 I2C_ADDR   = int(opts.get("i2c_address", "0x3C"), 16)
 SENSOR_CPU = opts.get("sensor_cpu",  "sensor.system_monitor_utilisation_du_processeur")
-SENSOR_RAM = opts.get("sensor_ram",  "sensor.system_monitor_utilisation_de_la_memoire")
-W, H = 128, 64
+SENSOR_RAM     = opts.get("sensor_ram",     "sensor.system_monitor_utilisation_de_la_memoire")
+SENSOR_CPU_TEMP = opts.get("sensor_cpu_temp", "sensor.system_monitor_temperature_du_processeur")
+W, H = 64, 128
 
 # ── Police bitmap 5x7 ─────────────────────────────────────────────────────────
 FONT5X7 = {
@@ -78,7 +79,7 @@ def center(text, scale=2):
 class HAClient:
     def __init__(self):
         self.headers = {"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"}
-        self.cpu = "--"; self.ram = "--"; self.online = False
+        self.cpu = "--"; self.ram = "--"; self.cpu_temp = "--"; self.online = False
         self._lock = threading.Lock()
 
     def fetch(self):
@@ -94,10 +95,10 @@ class HAClient:
                     try: return f"{float(val):.0f}"
                     except: return val
                 return "--"
-            cpu = get(SENSOR_CPU); ram = get(SENSOR_RAM)
+            cpu = get(SENSOR_CPU); ram = get(SENSOR_RAM); cpu_temp = get(SENSOR_CPU_TEMP)
             with self._lock:
-                self.cpu = cpu; self.ram = ram; self.online = True
-                print(f"[HA] CPU={cpu}% RAM={ram}%")
+                self.cpu = cpu; self.ram = ram; self.cpu_temp = cpu_temp; self.online = True
+                print(f"[HA] CPU={cpu}% RAM={ram}% TEMP={cpu_temp}C")
         except Exception as e:
             print(f"[HA] {e}")
             with self._lock: self.online = False
@@ -108,7 +109,7 @@ class HAClient:
         threading.Thread(target=loop, daemon=True).start()
 
     def get(self):
-        with self._lock: return self.cpu, self.ram, self.online
+        with self._lock: return self.cpu, self.ram, self.cpu_temp, self.online
 
 # ── Rendu ─────────────────────────────────────────────────────────────────────
 # Layout 4 lignes, scale=2 (char = 10x14px), espacement = 16px
@@ -122,50 +123,63 @@ SPINNERS = ['|','/','-','\\']
 def render(device, ha):
     tick = 0
     while True:
-        cpu, ram, online = ha.get()
+        cpu, ram, cpu_temp, online = ha.get()
         now = datetime.now()
         img  = Image.new("1", (W, H), 0)
         draw = ImageDraw.Draw(img)
 
-        # Ligne 1 — date + heure
-        dt = now.strftime("%d/%m/%y %H:%M:%S")
-        draw_text(draw, center(dt, scale=1), 0, dt, scale=1)
+        # W=64, H=128 apres rotation 90deg
 
-        # Ligne 2 — statut + spinner
+        # Ligne 1 — date
+        d = now.strftime("%d/%m/%Y")
+        draw_text(draw, center(d, scale=1), 0, d, scale=1)
+
+        # Ligne 2 — heure
+        t = now.strftime("%H:%M:%S")
+        draw_text(draw, center(t, scale=1), 10, t, scale=1)
+
+        # Ligne 3 — statut + spinner
         status = "ONLINE" if online else "OFFLINE"
         sp = SPINNERS[tick % 4]
-        draw_text(draw, 0, 10, status, scale=1)
-        draw_text(draw, W - 6, 10, sp, scale=1)
+        draw_text(draw, 0, 20, status, scale=1)
+        # Spinner a droite, forcer affichage pixel par pixel
+        draw_char(draw, W - 7, 20, sp, scale=1)
 
-        # Ligne 3 — vide
+        # Separateur
+        draw.line([(0, 30), (W, 30)], fill=1)
+
+        # Ligne 4 — temperature CPU
+        draw_text(draw, 0, 33, "TEMP CPU", scale=1)
+        draw_text(draw, 0, 43, f"{cpu_temp}C", scale=1)
+
+        # Separateur
+        draw.line([(0, 53), (W, 53)], fill=1)
 
         # Barre CPU
         try:
             pct = min(int(float(cpu)), 100)
         except:
             pct = 0
-        draw.rectangle([(0, 30), (W-1, 40)], outline=1)
+        draw_text(draw, 0, 56, "CPU", scale=1)
+        draw.rectangle([(0, 65), (W-1, 73)], outline=1)
         if pct > 0:
             fill_w = int((W - 2) * pct / 100)
-            draw.rectangle([(1, 31), (fill_w, 39)], fill=1)
-        # Label CPU aligné à droite dans la barre
-        cpu_label = f"CPU {cpu}%"
-        lw = text_w(cpu_label, scale=1)
-        draw_text(draw, W - lw - 2, 31, cpu_label, scale=1)
+            draw.rectangle([(1, 66), (fill_w, 72)], fill=1)
+        cpu_pct_str = f"{cpu}%"
+        draw_text(draw, W - text_w(cpu_pct_str, 1) - 1, 56, cpu_pct_str, scale=1)
 
         # Barre RAM
         try:
             rpct = min(int(float(ram)), 100)
         except:
             rpct = 0
-        draw.rectangle([(0, 43), (W-1, 53)], outline=1)
+        draw_text(draw, 0, 76, "RAM", scale=1)
+        draw.rectangle([(0, 85), (W-1, 93)], outline=1)
         if rpct > 0:
             fill_w = int((W - 2) * rpct / 100)
-            draw.rectangle([(1, 44), (fill_w, 52)], fill=1)
-        # Label RAM aligné à droite dans la barre
-        ram_label = f"RAM {ram}%"
-        lw = text_w(ram_label, scale=1)
-        draw_text(draw, W - lw - 2, 44, ram_label, scale=1)
+            draw.rectangle([(1, 86), (fill_w, 92)], fill=1)
+        ram_pct_str = f"{ram}%"
+        draw_text(draw, W - text_w(ram_pct_str, 1) - 1, 76, ram_pct_str, scale=1)
 
         device.display(img)
         tick += 1
@@ -175,7 +189,11 @@ def render(device, ha):
 def main():
     print(f"[ICDisplay] I2C bus={I2C_BUS} addr=0x{I2C_ADDR:02X}")
     serial = i2c(port=I2C_BUS, address=I2C_ADDR)
-    device = sh1106(serial, width=W, height=H, rotate=0, h_flip=True)
+    import os
+    os.environ.setdefault('TZ', 'Europe/Luxembourg')
+    import time as _time
+    _time.tzset()
+    device = sh1106(serial, width=64, height=128, rotate=1, h_flip=False)
     ha = HAClient()
     ha.start_polling()
     render(device, ha)
