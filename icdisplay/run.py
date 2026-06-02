@@ -118,7 +118,7 @@ class HAClient:
 # Y=32 : date
 # Y=48 : barre CPU
 
-SPINNERS = ['|','/','-','\\']
+SPINNERS = ['+', 'X']
 
 def render(device, ha):
     tick = 0
@@ -138,44 +138,42 @@ def render(device, ha):
 
         # Ligne 3 — statut + spinner
         status = "ONLINE" if online else "OFFLINE"
-        sp = SPINNERS[tick % 4]
+        sp = SPINNERS[tick % 2]
         draw_text(draw, 0, 20, status, scale=1)
         draw_char(draw, W - 7, 20, sp, scale=1)
 
-        # Ligne 4 — temperature CPU (sans separateur)
+        # Ligne 4 — temperature CPU (6px plus bas = y=32 -> y=32, ok)
         temp_str = f"CPU: {cpu_temp}"
         draw_text(draw, 0, 32, temp_str, scale=1)
-        # degre C : dessiner le symbole degree manuellement (petit cercle)
         tw = text_w(temp_str, scale=1)
-        # cercle degree 2x2
         draw.rectangle([tw + 1, 32, tw + 2, 33], outline=1)
         draw_text(draw, tw + 4, 32, "C", scale=1)
 
-        # Barre CPU (decalee vers le bas)
+        # Barre CPU — +6px d'espacement apres temp
         try:
             pct = min(int(float(cpu)), 100)
         except:
             pct = 0
-        draw_text(draw, 0, 44, "CPU", scale=1)
+        draw_text(draw, 0, 50, "CPU", scale=1)
         cpu_pct_str = f"{cpu}%"
-        draw_text(draw, W - text_w(cpu_pct_str, 1) - 1, 44, cpu_pct_str, scale=1)
-        draw.rectangle([(0, 54), (W-1, 62)], outline=1)
+        draw_text(draw, W - text_w(cpu_pct_str, 1) - 1, 50, cpu_pct_str, scale=1)
+        draw.rectangle([(0, 60), (W-1, 68)], outline=1)
         if pct > 0:
             fill_w = int((W - 2) * pct / 100)
-            draw.rectangle([(1, 55), (fill_w, 61)], fill=1)
+            draw.rectangle([(1, 61), (fill_w, 67)], fill=1)
 
-        # Barre RAM (decalee vers le bas)
+        # Barre RAM
         try:
             rpct = min(int(float(ram)), 100)
         except:
             rpct = 0
-        draw_text(draw, 0, 65, "RAM", scale=1)
+        draw_text(draw, 0, 72, "RAM", scale=1)
         ram_pct_str = f"{ram}%"
-        draw_text(draw, W - text_w(ram_pct_str, 1) - 1, 65, ram_pct_str, scale=1)
-        draw.rectangle([(0, 75), (W-1, 83)], outline=1)
+        draw_text(draw, W - text_w(ram_pct_str, 1) - 1, 72, ram_pct_str, scale=1)
+        draw.rectangle([(0, 82), (W-1, 90)], outline=1)
         if rpct > 0:
             fill_w = int((W - 2) * rpct / 100)
-            draw.rectangle([(1, 76), (fill_w, 82)], fill=1)
+            draw.rectangle([(1, 83), (fill_w, 89)], fill=1)
 
         device.display(img.transpose(Image.ROTATE_90))
         tick += 1
