@@ -25,7 +25,7 @@ I2C_ADDR   = int(opts.get("i2c_address", "0x3C"), 16)
 SENSOR_CPU = opts.get("sensor_cpu",  "sensor.system_monitor_utilisation_du_processeur")
 SENSOR_RAM     = opts.get("sensor_ram",     "sensor.system_monitor_utilisation_de_la_memoire")
 SENSOR_CPU_TEMP = opts.get("sensor_cpu_temp", "sensor.system_monitor_temperature_du_processeur")
-W, H = 64, 128
+W, H = 64, 128  # canvas de rendu pivotée
 
 # ── Police bitmap 5x7 ─────────────────────────────────────────────────────────
 FONT5X7 = {
@@ -181,7 +181,7 @@ def render(device, ha):
         ram_pct_str = f"{ram}%"
         draw_text(draw, W - text_w(ram_pct_str, 1) - 1, 76, ram_pct_str, scale=1)
 
-        device.display(img)
+        device.display(img.transpose(Image.ROTATE_90))
         tick += 1
         time.sleep(1)
 
@@ -193,7 +193,7 @@ def main():
     os.environ.setdefault('TZ', 'Europe/Luxembourg')
     import time as _time
     _time.tzset()
-    device = sh1106(serial, width=64, height=128, rotate=1, h_flip=False)
+    device = sh1106(serial, width=128, height=64, rotate=0, h_flip=True)
     ha = HAClient()
     ha.start_polling()
     render(device, ha)
