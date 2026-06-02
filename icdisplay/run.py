@@ -127,51 +127,45 @@ def render(device, ha):
         img  = Image.new("1", (W, H), 0)
         draw = ImageDraw.Draw(img)
 
-        # Ligne 1 — heure centrée
-        t = now.strftime("%H:%M:%S")
-        draw_text(draw, center(t, scale=1), 0, t, scale=1)
+        # Ligne 1 — date + heure
+        dt = now.strftime("%d/%m/%y %H:%M:%S")
+        draw_text(draw, center(dt, scale=1), 0, dt, scale=1)
 
-        # Ligne 2 — CPU et RAM
-        cpu_str = f"C:{cpu}%"
-        ram_str = f"R:{ram}%"
-        draw_text(draw, 0,  10, cpu_str, scale=1)
-        draw_text(draw, 66, 10, ram_str, scale=1)
-
-        # Spinner
-        sp = SPINNERS[tick % 4]
-        draw_text(draw, 116, 10, sp, scale=1)
-
-        # Ligne 3 — date
-        d = now.strftime("%d/%m/%y")
-        draw_text(draw, center(d, scale=1), 20, d, scale=1)
-
-        # Ligne 4 — statut
+        # Ligne 2 — statut + spinner
         status = "ONLINE" if online else "OFFLINE"
-        draw_text(draw, center(status, scale=1), 30, status, scale=1)
+        sp = SPINNERS[tick % 4]
+        draw_text(draw, 0, 10, status, scale=1)
+        draw_text(draw, W - 6, 10, sp, scale=1)
+
+        # Ligne 3 — vide
 
         # Barre CPU
         try:
             pct = min(int(float(cpu)), 100)
         except:
             pct = 0
-        draw.rectangle([(0, 40), (W-1, 50)], outline=1)
+        draw.rectangle([(0, 30), (W-1, 40)], outline=1)
         if pct > 0:
             fill_w = int((W - 2) * pct / 100)
-            draw.rectangle([(1, 41), (fill_w, 49)], fill=1)
+            draw.rectangle([(1, 31), (fill_w, 39)], fill=1)
+        # Label CPU aligné à droite dans la barre
+        cpu_label = f"CPU {cpu}%"
+        lw = text_w(cpu_label, scale=1)
+        draw_text(draw, W - lw - 2, 31, cpu_label, scale=1)
 
         # Barre RAM
         try:
             rpct = min(int(float(ram)), 100)
         except:
             rpct = 0
-        draw.rectangle([(0, 53), (W-1, 63)], outline=1)
+        draw.rectangle([(0, 43), (W-1, 53)], outline=1)
         if rpct > 0:
             fill_w = int((W - 2) * rpct / 100)
-            draw.rectangle([(1, 54), (fill_w, 62)], fill=1)
-
-        # Labels barres
-        draw_text(draw, 2, 41, "CPU", scale=1)
-        draw_text(draw, 2, 54, "RAM", scale=1)
+            draw.rectangle([(1, 44), (fill_w, 52)], fill=1)
+        # Label RAM aligné à droite dans la barre
+        ram_label = f"RAM {ram}%"
+        lw = text_w(ram_label, scale=1)
+        draw_text(draw, W - lw - 2, 44, ram_label, scale=1)
 
         device.display(img)
         tick += 1
