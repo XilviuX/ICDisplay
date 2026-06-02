@@ -139,8 +139,8 @@ def render(device, ha):
         # Ligne 3 — statut + spinner
         status = "ONLINE" if online else "OFFLINE"
         sp = SPINNERS[tick % 2]
-        draw_text(draw, 0, 20, status, scale=1)
-        draw_char(draw, W - 7, 20, sp, scale=1)
+        draw_text(draw, 0, 26, status, scale=1)
+        draw_char(draw, W - 7, 26, sp, scale=1)
 
         # Ligne 4 — temperature CPU (6px plus bas = y=32 -> y=32, ok)
         temp_str = f"CPU: {cpu_temp}"
