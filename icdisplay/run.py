@@ -144,10 +144,10 @@ def render(device, ha):
 
         # Ligne 4 — temperature CPU (6px plus bas = y=32 -> y=32, ok)
         temp_str = f"CPU: {cpu_temp}"
-        draw_text(draw, 0, 32, temp_str, scale=1)
+        draw_text(draw, 0, 38, temp_str, scale=1)
         tw = text_w(temp_str, scale=1)
-        draw.rectangle([tw + 1, 32, tw + 2, 33], outline=1)
-        draw_text(draw, tw + 4, 32, "C", scale=1)
+        draw.rectangle([tw + 1, 38, tw + 2, 39], outline=1)
+        draw_text(draw, tw + 4, 38, "C", scale=1)
 
         # Barre CPU — +6px d'espacement apres temp
         try:
