@@ -122,60 +122,71 @@ SPINNERS = ['+', 'X']
 
 def render(device, ha):
     tick = 0
+    last_data = (None, None, None, None)  # cpu, ram, temp, online
+    last_hm = None  # HH:MM — redessine seulement si la minute change pour les donnees statiques
+
     while True:
         cpu, ram, cpu_temp, online = ha.get()
         now = datetime.now()
-        img  = Image.new("1", (W, H), 0)
-        draw = ImageDraw.Draw(img)
+        hms = now.strftime("%H:%M:%S")
+        hm  = now.strftime("%H:%M")
+        cur_data = (cpu, ram, cpu_temp, online)
 
-        # Ligne 1 — date
-        d = now.strftime("%d/%m/%Y")
-        draw_text(draw, center(d, scale=1), 0, d, scale=1)
+        # Redessiner uniquement si l heure (HH:MM) ou les donnees ont change
+        if hm != last_hm or cur_data != last_data:
+            img  = Image.new("1", (W, H), 0)
+            draw = ImageDraw.Draw(img)
 
-        # Ligne 2 — heure
-        t = now.strftime("%H:%M:%S")
-        draw_text(draw, center(t, scale=1), 10, t, scale=1)
+            # Ligne 1 — date
+            d = now.strftime("%d/%m/%Y")
+            draw_text(draw, center(d, scale=1), 0, d, scale=1)
 
-        # Ligne 3 — statut + spinner
-        status = "ONLINE" if online else "OFFLINE"
-        sp = SPINNERS[tick % 2]
-        draw_text(draw, 0, 26, status, scale=1)
-        draw_char(draw, W - 7, 26, sp, scale=1)
+            # Ligne 2 — heure
+            draw_text(draw, center(hms, scale=1), 10, hms, scale=1)
 
-        # Ligne 4 — temperature CPU (6px plus bas = y=32 -> y=32, ok)
-        temp_str = f"CPU: {cpu_temp}"
-        draw_text(draw, 0, 38, temp_str, scale=1)
-        tw = text_w(temp_str, scale=1)
-        draw.rectangle([tw + 1, 38, tw + 2, 39], outline=1)
-        draw_text(draw, tw + 4, 38, "C", scale=1)
+            # Ligne 3 — statut + spinner
+            status = "ONLINE" if online else "OFFLINE"
+            sp = SPINNERS[tick % 2]
+            draw_text(draw, 0, 26, status, scale=1)
+            draw_char(draw, W - 7, 26, sp, scale=1)
 
-        # Barre CPU — +6px d'espacement apres temp
-        try:
-            pct = min(int(float(cpu)), 100)
-        except:
-            pct = 0
-        draw_text(draw, 0, 50, "CPU", scale=1)
-        cpu_pct_str = f"{cpu}%"
-        draw_text(draw, W - text_w(cpu_pct_str, 1) - 1, 50, cpu_pct_str, scale=1)
-        draw.rectangle([(0, 60), (W-1, 68)], outline=1)
-        if pct > 0:
-            fill_w = int((W - 2) * pct / 100)
-            draw.rectangle([(1, 61), (fill_w, 67)], fill=1)
+            # Ligne 4 — temperature CPU
+            temp_str = f"CPU: {cpu_temp}"
+            draw_text(draw, 0, 38, temp_str, scale=1)
+            tw = text_w(temp_str, scale=1)
+            draw.rectangle([tw + 1, 38, tw + 2, 39], outline=1)
+            draw_text(draw, tw + 4, 38, "C", scale=1)
 
-        # Barre RAM
-        try:
-            rpct = min(int(float(ram)), 100)
-        except:
-            rpct = 0
-        draw_text(draw, 0, 72, "RAM", scale=1)
-        ram_pct_str = f"{ram}%"
-        draw_text(draw, W - text_w(ram_pct_str, 1) - 1, 72, ram_pct_str, scale=1)
-        draw.rectangle([(0, 82), (W-1, 90)], outline=1)
-        if rpct > 0:
-            fill_w = int((W - 2) * rpct / 100)
-            draw.rectangle([(1, 83), (fill_w, 89)], fill=1)
+            # Barre CPU
+            try:
+                pct = min(int(float(cpu)), 100)
+            except:
+                pct = 0
+            draw_text(draw, 0, 50, "CPU", scale=1)
+            cpu_pct_str = f"{cpu}%"
+            draw_text(draw, W - text_w(cpu_pct_str, 1) - 1, 50, cpu_pct_str, scale=1)
+            draw.rectangle([(0, 60), (W-1, 68)], outline=1)
+            if pct > 0:
+                fill_w = int((W - 2) * pct / 100)
+                draw.rectangle([(1, 61), (fill_w, 67)], fill=1)
 
-        device.display(img.transpose(Image.ROTATE_90))
+            # Barre RAM
+            try:
+                rpct = min(int(float(ram)), 100)
+            except:
+                rpct = 0
+            draw_text(draw, 0, 72, "RAM", scale=1)
+            ram_pct_str = f"{ram}%"
+            draw_text(draw, W - text_w(ram_pct_str, 1) - 1, 72, ram_pct_str, scale=1)
+            draw.rectangle([(0, 82), (W-1, 90)], outline=1)
+            if rpct > 0:
+                fill_w = int((W - 2) * rpct / 100)
+                draw.rectangle([(1, 83), (fill_w, 89)], fill=1)
+
+            device.display(img.transpose(Image.ROTATE_90))
+            last_hm   = hm
+            last_data = cur_data
+
         tick += 1
         time.sleep(1)
 
