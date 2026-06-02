@@ -129,39 +129,55 @@ def render(device, ha):
 
         # Ligne 1 — heure centrée
         t = now.strftime("%H:%M:%S")
-        draw_text(draw, center(t), 0, t)
+        draw_text(draw, center(t, scale=1), 0, t, scale=1)
 
         # Ligne 2 — CPU et RAM
         cpu_str = f"C:{cpu}%"
         ram_str = f"R:{ram}%"
+        draw_text(draw, 0,  10, cpu_str, scale=1)
+        draw_text(draw, 66, 10, ram_str, scale=1)
+
+        # Spinner
         sp = SPINNERS[tick % 4]
-        draw_text(draw, 0,   16, cpu_str)
-        draw_text(draw, 72,  16, ram_str)
+        draw_text(draw, 116, 10, sp, scale=1)
 
-        # Ligne 3 — date + spinner
+        # Ligne 3 — date
         d = now.strftime("%d/%m/%y")
-        draw_text(draw, 0,   32, d)
-        draw_text(draw, 104, 32, sp)
+        draw_text(draw, center(d, scale=1), 20, d, scale=1)
 
-        # Ligne 4 — barre CPU
+        # Ligne 4 — statut
+        status = "ONLINE" if online else "OFFLINE"
+        draw_text(draw, center(status, scale=1), 30, status, scale=1)
+
+        # Barre CPU
         try:
             pct = min(int(float(cpu)), 100)
         except:
             pct = 0
-        draw.rectangle([(0, 50), (W-1, 63)], outline=1)
+        draw.rectangle([(0, 40), (W-1, 50)], outline=1)
         if pct > 0:
             fill_w = int((W - 2) * pct / 100)
-            draw.rectangle([(1, 51), (fill_w, 62)], fill=1)
+            draw.rectangle([(1, 41), (fill_w, 49)], fill=1)
 
-        # Indicateur online dans la barre
-        status = "ON" if online else "OFF"
-        draw_text(draw, 4, 51, status, scale=1)
+        # Barre RAM
+        try:
+            rpct = min(int(float(ram)), 100)
+        except:
+            rpct = 0
+        draw.rectangle([(0, 53), (W-1, 63)], outline=1)
+        if rpct > 0:
+            fill_w = int((W - 2) * rpct / 100)
+            draw.rectangle([(1, 54), (fill_w, 62)], fill=1)
+
+        # Labels barres
+        draw_text(draw, 2, 41, "CPU", scale=1)
+        draw_text(draw, 2, 54, "RAM", scale=1)
 
         device.display(img)
         tick += 1
         time.sleep(1)
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+
 def main():
     print(f"[ICDisplay] I2C bus={I2C_BUS} addr=0x{I2C_ADDR:02X}")
     serial = i2c(port=I2C_BUS, address=I2C_ADDR)
