@@ -143,9 +143,7 @@ def render(device, ha):
         # Sonar : deux cercles, le grand suit le petit avec un decalage
         cx, cy = W - 10, 29
         r1 = SONAR_RADII[tick % 4]
-        r2 = SONAR_RADII[(tick + 2) % 4]
         draw.ellipse([cx-r1, cy-r1, cx+r1, cy+r1], outline=1)
-        draw.ellipse([cx-r2, cy-r2, cx+r2, cy+r2], outline=1)
 
         # Ligne 4 — temperature CPU
         temp_str = f"CPU: {cpu_temp}"
