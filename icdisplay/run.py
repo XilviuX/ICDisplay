@@ -118,7 +118,7 @@ class HAClient:
 # Y=32 : date
 # Y=48 : barre CPU
 
-SONAR_RADII = [2, 4, 6, 8]  # rayon du cercle sonar en pixels
+SONAR_RADII = [2, 4, 6]  # rayon du cercle sonar en pixels
 
 def render(device, ha):
     tick = 0
@@ -142,7 +142,7 @@ def render(device, ha):
         draw_text(draw, 0, 26, status, scale=1)
         # Sonar : deux cercles, le grand suit le petit avec un decalage
         cx, cy = W - 10, 29
-        r1 = SONAR_RADII[tick % 4]
+        r1 = SONAR_RADII[tick % 3]
         draw.ellipse([cx-r1, cy-r1, cx+r1, cy+r1], outline=1)
 
         # Ligne 4 — temperature CPU
