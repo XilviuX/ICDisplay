@@ -118,7 +118,7 @@ class HAClient:
 # Y=32 : date
 # Y=48 : barre CPU
 
-SPINNERS = ['+', 'X']
+SONAR_RADII = [2, 4, 6, 8]  # rayon du cercle sonar en pixels
 
 def render(device, ha):
     tick = 0
@@ -137,11 +137,15 @@ def render(device, ha):
         # Ligne 2 — heure
         draw_text(draw, center(hms, scale=1), 10, hms, scale=1)
 
-        # Ligne 3 — statut + spinner
+        # Ligne 3 — statut + sonar
         status = "ONLINE" if online else "OFFLINE"
-        sp = SPINNERS[tick % 2]
         draw_text(draw, 0, 26, status, scale=1)
-        draw_char(draw, W - 7, 26, sp, scale=1)
+        # Sonar : deux cercles, le grand suit le petit avec un decalage
+        cx, cy = W - 10, 29
+        r1 = SONAR_RADII[tick % 4]
+        r2 = SONAR_RADII[(tick + 2) % 4]
+        draw.ellipse([cx-r1, cy-r1, cx+r1, cy+r1], outline=1)
+        draw.ellipse([cx-r2, cy-r2, cx+r2, cy+r2], outline=1)
 
         # Ligne 4 — temperature CPU
         temp_str = f"CPU: {cpu_temp}"
