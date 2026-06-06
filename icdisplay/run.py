@@ -145,36 +145,36 @@ def render(device, ha):
 
         # Ligne 4 — temperature CPU
         temp_str = f"CPU: {cpu_temp}"
-        draw_text(draw, 0, 38, temp_str, scale=1)
+        draw_text(draw, 0, 44, temp_str, scale=1)
         tw = text_w(temp_str, scale=1)
-        draw.rectangle([tw + 1, 38, tw + 2, 39], outline=1)
-        draw_text(draw, tw + 4, 38, "C", scale=1)
+        draw.rectangle([tw + 1, 44, tw + 2, 45], outline=1)
+        draw_text(draw, tw + 4, 44, "C", scale=1)
 
         # Barre CPU
         try:
             pct = min(int(float(cpu)), 100)
         except:
             pct = 0
-        draw_text(draw, 0, 50, "CPU", scale=1)
+        draw_text(draw, 0, 56, "CPU", scale=1)
         cpu_pct_str = f"{cpu}%"
-        draw_text(draw, W - text_w(cpu_pct_str, 1) - 1, 50, cpu_pct_str, scale=1)
-        draw.rectangle([(0, 60), (W-1, 68)], outline=1)
+        draw_text(draw, W - text_w(cpu_pct_str, 1) - 1, 56, cpu_pct_str, scale=1)
+        draw.rectangle([(0, 66), (W-1, 74)], outline=1)
         if pct > 0:
             fill_w = int((W - 2) * pct / 100)
-            draw.rectangle([(1, 61), (fill_w, 67)], fill=1)
+            draw.rectangle([(1, 67), (fill_w, 73)], fill=1)
 
         # Barre RAM
         try:
             rpct = min(int(float(ram)), 100)
         except:
             rpct = 0
-        draw_text(draw, 0, 72, "RAM", scale=1)
+        draw_text(draw, 0, 78, "RAM", scale=1)
         ram_pct_str = f"{ram}%"
-        draw_text(draw, W - text_w(ram_pct_str, 1) - 1, 72, ram_pct_str, scale=1)
-        draw.rectangle([(0, 82), (W-1, 90)], outline=1)
+        draw_text(draw, W - text_w(ram_pct_str, 1) - 1, 78, ram_pct_str, scale=1)
+        draw.rectangle([(0, 88), (W-1, 96)], outline=1)
         if rpct > 0:
             fill_w = int((W - 2) * rpct / 100)
-            draw.rectangle([(1, 83), (fill_w, 89)], fill=1)
+            draw.rectangle([(1, 89), (fill_w, 95)], fill=1)
 
         device.display(img.transpose(Image.ROTATE_90))
         tick += 1
